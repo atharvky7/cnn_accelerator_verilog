@@ -1,341 +1,337 @@
 
 
-# CNN Accelerator in Verilog
+# CNN Accelerator Building Block in Verilog
 
-This project implements a **small hardware engine** that performs the basic operations of a Convolutional Neural Network (CNN) using **Verilog HDL**.
+This project implements a **small but realistic hardware block** used inside modern **CNN accelerators** .
 
-A CNN mainly does three things:
+The design performs the core operations that every CNN accelerator relies on:
 
-1. It looks at **small 3×3 blocks** of an image
-2. It multiplies those pixels with **weights** and adds them
-3. It passes the result through **ReLU** and **pooling**
+1. **3×3 Convolution using fixed-point MAC units**
+2. **ReLU activation**
+3. **2×2 Max-pooling**
+4. **Multiple filters processed in parallel**
+5. **Line buffer + window buffer dataflow**, which is standard in real hardware accelerators
 
-This project recreates that behaviour in hardware, step by step, using simple and understandable modules.
+The aim is not to build a full CNN, but to show how the **main building block** of a CNN accelerator is built from scratch in Verilog.
 
-The goal of this project is **not** to build a full deep-learning chip, but to clearly show how the inner building blocks of a CNN work inside hardware.
-
-Everything is written in a clean, modular way so that even someone new to CNNs or hardware design can understand it.
-
----
-
-# 1. What This Project Does (Very Simple Explanation)
-
-Imagine you take an image and place a **small 3×3 magnifying glass** over it.
-At each position, you:
-
-* multiply each pixel with a number (weight)
-* add everything
-* if the number is negative, make it 0 (ReLU)
-* then, in groups of 2×2, take the maximum (max-pooling)
-
-This project builds the hardware that does exactly this automatically.
-
-If you run the design in simulation, it will:
-
-✔ Read an image from a hex file
-✔ Slide a 3×3 window over it
-✔ Calculate convolution correctly
-✔ Apply ReLU
-✔ Apply 2×2 max-pooling
-✔ Store final results in memory
-
-This is the same basic operation used in every modern AI vision chip.
+This project is written in simple, modular Verilog so that anyone can understand the underlying concepts without needing an FPGA board.
 
 ---
 
-# 2. Why This Project Is Useful
+# 1. What This Project Actually Does
 
-* It teaches the fundamentals of CNN hardware
-* It lets you see how images flow through hardware
-* It demonstrates sliding-window logic (line buffers)
-* It shows how MAC (multiply-accumulate) hardware works
-* It is extremely good for resumes and viva
-* It does NOT require any FPGA board — simulation only
-* Everything is written in simple Verilog modules
+This design behaves like the **core computational engine** inside AI hardware chips.
 
----
-
-# 3. Folder Structure (Easy Overview)
+In all real CNN accelerators, the most important component is the **convolution engine**, which continuously takes small windows (like 3×3) of an image and performs:
 
 ```
-src/         → all Verilog design files  
-tb/          → testbenches for simulation  
-data/        → input image, weights, and expected output  
-scripts/     → Python script for golden reference  
-docs/        → notes and diagrams  
-README.md    → you are reading this
+MAC (Multiply + Accumulate)
+Activation
+Pooling
+```
+
+This project implements:
+
+✔ 3×3 convolution (same as CNNs)
+✔ learned weights loaded from memory
+✔ ReLU activation
+✔ 2×2 max-pooling
+✔ multi-filter parallel processing
+
+This is exactly one **CNN layer block**, packaged the same way that real accelerators use internally.
+
+---
+
+# 2. Why This Is a CNN Accelerator Building Block
+
+Traditional image processing uses fixed filters (like Sobel or Gaussian).
+
+CNN accelerators use:
+
+* **Learned 3×3 filters**
+* **Sliding-window hardware**
+* **MAC arrays**
+* **Activation units**
+* **Pooling units**
+* **Weight memories**
+* **Dataflow controllers**
+
+This project includes all of these.
+
+This is the reason it qualifies as a **CNN accelerator building block**, not just basic image filtering.
+
+---
+
+# 3. Repository Structure
+
+```
+src/         → Verilog RTL files  
+tb/          → Testbenches  
+data/        → Image, weights, golden reference  
+scripts/     → Python golden model  
+docs/        → Notes and diagrams  
+README.md    → This document
 ```
 
 ---
 
-# 4. Explanation of Each Verilog File (Easy Language)
+# 4. File-by-File Explanation (Very Simple Language)
 
 ## 4.1 `cnn_params.vh`
 
-A small file that stores parameters like:
+Stores all common settings:
 
-* image width
-* data bit-width
+* image size
+* bit-width
 * number of filters
+* fractional bits
 
-Instead of typing numbers everywhere, we keep them here.
-This makes the design easier to change.
+This keeps the whole design clean and configurable.
 
 ---
 
 ## 4.2 `mac_3x3.v`
 
-This is the **heart** of the accelerator.
+Implements the core **Multiply–Accumulate (MAC)** operation.
 
 It takes:
 
-* 9 image pixels
-* 9 weight values
+* 9 pixels
+* 9 weights
 
-And calculates:
+And performs the sum of all multiplications.
 
-```
-sum = p0*w0 + p1*w1 + ... + p8*w8
-```
-
-This is exactly what convolution is.
-
-Think of it as a **mini calculator** that handles one 3×3 block.
+This is the most important logic inside every CNN accelerator, because convolution is just repeated MAC operations.
 
 ---
 
 ## 4.3 `relu.v`
 
-ReLU simply means:
+Implements the ReLU activation used in neural networks:
 
 ```
-If the number is negative → make it 0  
-Else → keep it
+If value < 0 → output = 0  
+Else → output = value
 ```
 
-This file does just that in one line of logic.
+ReLU makes the model nonlinear.
+This is a key step in CNNs.
 
 ---
 
 ## 4.4 `maxpool_2x2.v`
 
-Pooling reduces the size of the image.
+Performs **2×2 max-pooling**, which is used in CNNs to:
 
-From every 2×2 area:
+* reduce feature-map size
+* keep only the strongest activations
 
-```
-Take the largest value
-```
-
-Simple, but very important in CNNs.
+This module takes 4 numbers and outputs the largest.
 
 ---
 
 ## 4.5 `line_buffer.v`
 
-When doing 3×3 convolution, you need **3 rows of pixels at a time**.
+Stores the previous two rows of the image.
 
-But pixels arrive **one at a time** like a stream.
+Why?
 
-A line buffer stores the previous two rows so the hardware always “remembers” enough pixels to form a 3×3 window.
+A 3×3 window needs 3 rows.
+But incoming pixels arrive one-by-one.
 
-Analogy:
-Like keeping 2 previous sentences in memory while reading a paragraph.
+Real CNN accelerators **always use line buffers**.
 
 ---
 
 ## 4.6 `window_buffer.v`
 
-Takes the 3 rows from the line buffer and extracts the **3×3 block**.
+This module forms the actual **3×3 sliding window**.
 
-If the line buffer is a memory assistant,
-this is the **actual 3×3 magnifying glass**.
+It uses the output of the line buffer and shifts pixel values to create the full 3×3 block.
+
+This is exactly how real hardware extracts pixels for convolution.
 
 ---
 
 ## 4.7 `conv_core.v`
 
-This connects:
+Connects:
 
 * line buffer
 * window buffer
-* MAC
+* MAC units
 * weight memory
 
-It basically does:
+Produces convolution outputs for multiple filters.
 
-```
-Take 3×3 block → MAC → output
-```
+This module is the “mini CNN engine.”
 
-Many consider this the “engine room” of the accelerator.
+It uses the same dataflow as actual accelerator IP cores.
 
 ---
 
-## 4.8 `feature_mem_in.v`
+## 4.8 `weight_mem.v`
+
+Stores the learned CNN weights (kernels).
+
+CNN training happens on a computer, and the resulting 3×3 kernels are loaded into hardware.
+
+This memory simulates that step.
+
+---
+
+## 4.9 `feature_mem_in.v`
 
 Stores the input image in hex format.
 
-Loaded using:
-
-```
-$readmemh("input_image.hex")
-```
+Loaded using `$readmemh`.
 
 ---
 
-## 4.9 `feature_mem_out.v`
+## 4.10 `feature_mem_out.v`
 
-Stores the **final output** after convolution → ReLU → pooling.
+Stores the final processed feature map after:
 
-You can write this back into a file using:
-
-```
-$writememh(...)
-```
-
----
-
-## 4.10 `weight_mem.v`
-
-Stores the filter weights (the 3×3 kernel values).
-
-Also loaded from a hex file.
+* convolution
+* ReLU
+* pooling
 
 ---
 
 ## 4.11 `controller.v`
 
-A small state machine that controls the overall flow:
+A simple finite-state machine that coordinates everything.
 
-* when to read pixels
-* when a 3×3 window is valid
-* when MAC can start
-* when pooling starts
-* when everything is finished
+Similar to real NPU/TPU controllers, it tells:
 
-Without this, the modules would not work in sync.
+* when to read a pixel
+* when a window is valid
+* when MAC should compute
+* when pooling should start
+* when the entire layer is finished
 
 ---
 
 ## 4.12 `cnn_top.v`
 
-This is the main module.
-It connects all other modules together.
+The top-level module that connects all components together.
 
-When you run a simulation, **this is the file you run**.
+Think of this as the “chip” that contains:
+
+* memory
+* convolution engine
+* activation unit
+* pooling unit
+* FSM controller
+
+This is the module you simulate.
 
 ---
 
-# 5. Testbenches 
+# 5. Testbenches
 
-Testbenches help verify each module.
+## `tb_mac_3x3.v`
 
-## 5.1 `tb_mac_3x3.v`
+Tests if the MAC unit multiplies and adds correctly.
 
-Checks if the MAC unit multiplies and adds correctly.
+## `tb_line_window.v`
 
-## 5.2 `tb_line_window.v`
+Checks if the 3×3 window moves across the image correctly.
 
-Checks if the 3×3 window slides correctly across the image.
+## `tb_cnn_top.v`
 
-## 5.3 `tb_cnn_top.v`
+Runs the entire CNN building block from start to finish:
 
-Runs the **full pipeline**:
-
-* loads the image
-* loads the weights
+* loads image
+* loads weights
 * performs convolution
 * applies ReLU
-* applies pooling
-* prints final output
-
-This is the main testbench to demonstrate the project.
+* does pooling
+* writes final output
 
 ---
 
-# 6. Python Golden Model 
+# 6. Python Golden Model
 
-Inside `scripts/golden_cnn.py`, we simulate the same operations using Python.
+The Python script in `/scripts` performs the same operations as the Verilog design:
 
-This helps us check if Verilog results are correct.
+* convolution
+* ReLU
+* pooling
 
-The Python script:
+This lets you verify that hardware output matches software output.
 
-* reads the same image and weights
-* performs convolution, ReLU, and pooling
-* writes a file with expected output
-
-You can compare this file with Verilog output.
+Golden models are widely used in real chip design.
 
 ---
 
-# 7. How to Run the Project (Vivado Simulation)
+# 7. How to Run (Vivado)
 
-### Step 1: Open Vivado → "Run Simulation"
+1. Open Vivado
+2. Add files from `src/` and `tb/`
+3. Set top module:
 
-### Step 2: Add all files from:
-
-* `src/`
-* `tb/`
-
-### Step 3: Set top module to:
-
-```
-tb_cnn_top
-```
-
-### Step 4: Run simulation
-
-You will see output values printed or stored in the output memory.
+   ```
+   tb_cnn_top
+   ```
+4. Run simulation
+5. Watch the output feature map in the simulation logs or memory dump
 
 ---
 
-# 8. What This Accelerator Can Do
+# 8. What This Block Can Do
 
 ✔ Perform 3×3 convolution
-✔ Apply ReLU activation
-✔ Perform 2×2 max-pooling
-✔ Process small images
-✔ Use multiple filters
-✔ Fully simulate a CNN layer in hardware style
-✔ Easy to understand and modify
+✔ Apply ReLU
+✔ Apply max-pooling
+✔ Process multiple filters
+✔ Fully simulate a CNN layer
+✔ Use real CNN-trained weights
+✔ Represent the core of CNN accelerators (TPU/NPU style)
 
 ---
 
-# 9. What It Cannot Do 
+# 9. What This Block Cannot Do
 
-❌ Cannot train a CNN
-❌ Not optimized for speed or power
-❌ Not a full CNN (only one conv layer)
-❌ No stride, padding (unless added manually)
-❌ Works on small images only
-❌ Not meant for real hardware deployment yet
+❌ Train a neural network
+❌ Perform full deep learning inference
+❌ Handle large resolutions efficiently
+❌ Include deeper layers (unless extended)
+❌ Replace a complete AI accelerator
 
 
 ---
 
-# 10. Future Improvements
+# 10. Future Extensions
 
-
-* Add padding & stride
-* Add more filters
+* Add padding and stride
 * Add BatchNorm
-* Add deeper layers
-* Add streaming DMA interfaces
-* Implement pipelining
-* Port to FPGA board
+* Add multiple layers
+* Add streaming input/output
+* Add a larger MAC array
+* Implement on FPGA
+* Build a memory scheduler
+* Add quantization-aware processing
 
-Each of these makes the project even more impressive.
+Each of these makes it closer to a real NPU.
 
 ---
 
 # 11. Conclusion
 
-This project shows how the **core building blocks of a CNN** work in hardware:
+This project is a clean and understandable implementation of the **core building block used inside real CNN accelerators** such as:
 
-* storing pixel rows
+* Google TPU
+* NVIDIA NVDLA
+* AMD/Xilinx DPU
+* Intel Movidius NPU
+
+It recreates the internal dataflow of a CNN engine using:
+
 * sliding windows
-* MAC operations
+* MAC arrays
+* CNN weights
 * activation
 * pooling
+* controller FSM
+
