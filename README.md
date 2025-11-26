@@ -1,6 +1,6 @@
 
 
-# 🧠 CNN Accelerator Building Block (Verilog HDL)
+# CNN Accelerator Building Block (Verilog HDL)
 
 This project implements a **hardware building block used inside real Neural Network Accelerators** .
 It recreates, in simple Verilog HDL, the **core operations of a CNN layer**:
@@ -14,7 +14,7 @@ It recreates, in simple Verilog HDL, the **core operations of a CNN layer**:
 
 ---
 
-# 📌 1. Why This Project Exists
+# 1. Why This Project Exists
 
 Understanding how CNNs run on hardware (not Python) is one of the most important skills in modern digital design.
 This project shows, step by step, **how a CNN layer is implemented in hardware**, including:
@@ -30,7 +30,7 @@ Everything is designed so even beginners to hardware or CNNs can understand it.
 
 ---
 
-# 🚀 2. Quick Start (Run This First)
+# 2. Quick Start (Run This First)
 
 ## **Vivado Simulation**
 
@@ -75,7 +75,7 @@ This allows you to check whether the Verilog output is correct.
 
 ---
 
-# 🗂️ 3. Repository Structure
+# 3. Repository Structure
 
 ```
 cnn_accelerator_verilog/
@@ -90,7 +90,7 @@ cnn_accelerator_verilog/
 
 ---
 
-# 🧱 4. Architecture Overview (Simple Explanation)
+# 4. Architecture Overview (Simple Explanation)
 
 Here is the processing pipeline your hardware implements:
 
@@ -114,7 +114,7 @@ This is exactly how **real CNN accelerators** (Google TPU, NVIDIA NVDLA, Xilinx 
 
 ---
 
-# 🔍 5. Module-by-Module Explanation
+# 5. Module-by-Module Explanation
 
 ---
 
@@ -261,7 +261,7 @@ When running simulation, **simulate this module**.
 
 ---
 
-# 🧪 6. Testbenches
+# 6. Testbenches
 
 ### ✔ `tb_mac_3x3.v`
 
@@ -277,7 +277,7 @@ Runs the complete CNN pipeline from input → output.
 
 ---
 
-# 📊 7. Fixed-Point Format 
+# 7. Fixed-Point Format 
 
 All computations use **fixed-point** numbers, not floating-point.
 
@@ -299,7 +299,7 @@ This is how real accelerators store CNN weights and activations.
 
 ---
 
-# 📈 8. How to Compare with Python (Golden Reference)
+# 8. How to Compare with Python (Golden Reference)
 
 1. Prepare input image + weights
 
@@ -325,7 +325,7 @@ Matching values confirm hardware correctness.
 
 ---
 
-# 🧩 9. What This Hardware Block *Can* Do
+# 9. What This Hardware Block *Can* Do
 
 ✔ Correct 3×3 convolution
 ✔ ReLU activation
@@ -338,7 +338,7 @@ Matching values confirm hardware correctness.
 
 ---
 
-# ⚠️ 10. What It **Cannot** Do (Yet)
+# 10. What It **Cannot** Do (Yet)
 
 ❌ It does not train a CNN
 ❌ Not a full deep-learning accelerator
@@ -363,7 +363,7 @@ Each of these brings you closer to a full NPU/TPU design.
 
 ---
 
-# 🏁 12. Final Notes
+# 12. Final Notes
 
 This project demonstrates the **foundation of nearly every AI accelerator chip**:
 
